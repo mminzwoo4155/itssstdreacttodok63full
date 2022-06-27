@@ -2,24 +2,106 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDu53j76Vl_isL2RifmRbsjb0UFbVgKx9k",
-  authDomain: "fir-todo-c7c23.firebaseapp.com",
-  projectId: "fir-todo-c7c23",
-  storageBucket: "fir-todo-c7c23.appspot.com",
-  messagingSenderId: "676680644669",
-  appId: "1:676680644669:web:6e5bdabc5fa555999a1254",
-  measurementId: "G-FTHBR66S2Q"
+  apiKey: "AIzaSyAHT2hoo7og9L7-hw2toCU0wtU-mnip5xo",
+  authDomain: "todo-app-f1fd1.firebaseapp.com",
+  projectId: "todo-app-f1fd1",
+  storageBucket: "todo-app-f1fd1.appspot.com",
+  messagingSenderId: "631581453565",
+  appId: "1:631581453565:web:da06bd81111ae281fd2294"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-// const analytics = getAnalytics(app);
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.firestore();
+export const auth = firebase.auth();
+export default firebase;
+
+export const getFirebaseItems = async () => {
+  try {
+    const snapshot = await db
+      .collection("todos")
+      .get();
+    const items = snapshot.docs.map(
+      (doc) => ({ ...doc.data(), id: doc.id })
+    );
+    return items;
+  } catch (err) {
+    console.log(err);
+    return [];
+  }
+}
+
+export const addFirebaseItem = async (item) => {
+  try {
+    const todoRef = db.collection("todos");
+    await todoRef.add(item);
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+export const updateFirebaseItem = async (item, id) => {
+  try {
+    const todoRef = db.collection("todos").doc(id);
+    await todoRef.update(item);
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+export const clearFirebaseItem = async (item) => {
+  const todoRef = db.collection("todos").doc(item.id);
+  await todoRef.delete().then(function () {
+  }).catch(function (err) {
+    console.log(err);
+  });
+};
+
+export const uiConfig = {
+  signInFlow: 'popup',
+  signInSuccessUrl: "/",
+  signInOptions: [
+    firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+  ],
+}
+
+export const storeUserInfo = async (user) => {
+  const { uid } = user;
+  const userDoc = await db.collection("users").doc(uid).get();
+  if (!userDoc.exists) {
+    await db.collection("users").doc(uid).set({ name: user.displayName });
+    return {
+      name: user.displayName,
+      id: uid,
+    };
+  } else {
+    return {
+      id: uid,
+      ...userDoc.data(),
+    };
+  }
+}
+
+export const updateUser = async (user, image) => {
+  try {
+    const userDoc = await firebase.firestore().collection("users").doc(user.id).get();
+    if (userDoc.exists) {
+      await firebase.firestore().collection("users").doc(user.id).update({ ...userDoc.data(), image: image });
+    }
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+export const uploadImage = async (image) => {
+  const ref = firebase.storage().ref().child(`/images/${image.name}`);
+  let downloadUrl = "";
+  try {
+    await ref.put(image);
+    downloadUrl = await ref.getDownloadURL();
+  } catch (err) {
+    console.log(err);
+  }
+  return downloadUrl;
+};
